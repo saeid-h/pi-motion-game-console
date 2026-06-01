@@ -1,0 +1,11 @@
+# On the Raspberry Pi, prefer system packages (prebuilt — avoids slow/failing
+# source builds on a Pi 3B):
+#
+#   sudo apt install python3-opencv python3-pygame python3-picamera2
+#
+# This file is for development on a desktop (Mac/Linux) using a USB webcam,
+# where pip wheels are available. picamera2 is Pi-only and intentionally omitted.
+
+opencv-python>=4.5
+pygame>=2.1
+numpy>=1.21
