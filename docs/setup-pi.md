@@ -109,8 +109,8 @@ If using HDMI audio and you hear nothing, make sure the TV input/volume is up.
 
 ```bash
 cd ~
-git clone https://github.com/saeid-h/raspberry-games.git
-cd raspberry-games
+git clone https://github.com/saeid-h/pi-motion-game-console.git
+cd pi-motion-game-console
 ```
 
 ## 9. Run

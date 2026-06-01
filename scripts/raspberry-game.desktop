@@ -2,6 +2,6 @@
 Type=Application
 Name=Raspberry Game
 Comment=Motion game console — starts the game after desktop login
-Exec=/home/pi/raspberry-games/scripts/start-game.sh
+Exec=/home/pi/pi-motion-game-console/scripts/start-game.sh
 Terminal=false
 X-GNOME-Autostart-enabled=true

@@ -3,7 +3,7 @@
 Make the Pi power on, log in, and launch the game automatically — no keyboard
 needed. Do this after the game already runs manually (see `setup-pi.md`).
 
-> Assumes username `pi` and the repo cloned at `~/raspberry-games`. If yours
+> Assumes username `pi` and the repo cloned at `~/pi-motion-game-console`. If yours
 > differ, adjust the paths below (especially in the `.desktop` file).
 
 ## 1. Auto-login to the desktop
@@ -19,13 +19,13 @@ prompt.
 ## 2. Make the launch script executable
 
 ```bash
-chmod +x ~/raspberry-games/scripts/start-game.sh
+chmod +x ~/pi-motion-game-console/scripts/start-game.sh
 ```
 
 Test it from a terminal first — it should open the game fullscreen:
 
 ```bash
-~/raspberry-games/scripts/start-game.sh
+~/pi-motion-game-console/scripts/start-game.sh
 ```
 
 Press **ESC** or **Q** to quit back to the desktop.
@@ -37,11 +37,11 @@ on both X11 (Pi 3B's default) and Wayland.
 
 ```bash
 mkdir -p ~/.config/autostart
-cp ~/raspberry-games/scripts/raspberry-game.desktop ~/.config/autostart/
+cp ~/pi-motion-game-console/scripts/raspberry-game.desktop ~/.config/autostart/
 ```
 
 Open `~/.config/autostart/raspberry-game.desktop` and confirm the `Exec=` path
-matches your username and clone location (default `/home/pi/raspberry-games/...`).
+matches your username and clone location (default `/home/pi/pi-motion-game-console/...`).
 
 ## 4. Reboot and test
 
