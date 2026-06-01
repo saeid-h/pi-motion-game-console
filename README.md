@@ -35,6 +35,7 @@ This runs at ~20–30 FPS on a Pi 3B, so reactions feel instant.
 ## Setup
 
 See [`docs/setup-pi.md`](docs/setup-pi.md) for the from-scratch Raspberry Pi setup,
+[`docs/kiosk-autostart.md`](docs/kiosk-autostart.md) to boot straight into the game,
 and [`docs/design.md`](docs/design.md) for how the code is structured.
 
 ## Run
