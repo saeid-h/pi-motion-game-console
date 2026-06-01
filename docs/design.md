@@ -112,6 +112,53 @@ machine.
 4. **Phase 3** — `game_jump.py` end-to-end.
 5. **Phase 4** — tune thresholds for a real child; document how to add the next game.
 
-## Tuning notes
+## Tuning (do this on the Pi, with your child)
 
-_(to be filled in Phase 4 once tested with a real child and camera)_
+The thresholds in `config.py` are sensible defaults but **must be dialed in for your
+room, lighting, camera placement, and how big your son's movements are**. The logic and
+mechanics are verified; only these real-world numbers remain.
+
+Procedure:
+
+1. **Run the camera test first:** `python3 src/camera.py`. Have your son stand where
+   he'll play. Watch the live values:
+   - When he stands still, every zone should read near **0.00–0.02**. If it idles
+     higher, raise `MOG2_VAR_THRESHOLD` and/or improve lighting (avoid a bright window
+     behind him).
+   - When he **jumps**, note the peak `top` value. When he **punches**, note `left`/`right`.
+2. **Set thresholds to ~60–70% of the peak** you observed. e.g. if a jump peaks `top`
+   ≈ 0.20, set `JUMP_THRESHOLD ≈ 0.13`. High enough to ignore fidgeting, low enough that
+   a real jump always fires.
+3. **Debounce:** if one jump registers as several in-game jumps, raise `DEBOUNCE_S`
+   (try 0.6–0.8). If quick repeated jumps feel unresponsive, lower it.
+4. **Camera framing:** mount at roughly chest height, far enough back that his whole body
+   is in frame. The `top` zone is the upper 40% of the frame — make sure his head/arms
+   actually enter it when he jumps. Adjust the zone boxes in `ZONES` if framing differs.
+5. **Berry reach:** if the highest raspberries feel unreachable, lower the spawn heights
+   in `GameState._spawn` (`game_jump.py`) or raise `JUMP_V`. Measured airtime peak is
+   ~154 px at the current `JUMP_V`/`GRAVITY`.
+
+Record the values you land on here once tested:
+
+| Knob | Default | Tuned for our room |
+|------|---------|--------------------|
+| `JUMP_THRESHOLD` | 0.12 | _tbd_ |
+| `MOG2_VAR_THRESHOLD` | 32 | _tbd_ |
+| `DEBOUNCE_S` | 0.5 | _tbd_ |
+
+## How to add the next game
+
+Every game reuses the same input layer, so a new game is small:
+
+1. Create `src/game_<name>.py`.
+2. Start a tracker: `import camera; tracker = camera.MotionTracker().start()`.
+3. Each frame, read `signals = tracker.get()` and use the relevant zone(s):
+   - **Punch it** → `signals["left"]` / `signals["right"]` with a `JumpTrigger`-style
+     debounce per side (reuse `JumpTrigger` from `game_jump.py`).
+   - **Dance Along** → `signals["total"]`, averaged over a short window, drives a
+     "dance meter."
+   - **Simon Says** → compare which side/zone has the most motion to the current prompt.
+4. Reuse the pattern from `game_jump.py`: a pygame-free state class + a `draw()` function
+   + the same calibration warm-up and main loop.
+
+A later `src/main.py` will be a simple menu that launches the chosen game.
