@@ -10,6 +10,9 @@ env/
 .DS_Store
 Thumbs.db
 
+# Local Claude Code guidance (kept out of version control)
+CLAUDE.md
+
 # Runtime / scratch
 *.log
 calibration_*.png
