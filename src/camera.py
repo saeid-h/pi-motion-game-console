@@ -12,6 +12,8 @@ Run standalone to verify the camera and watch live zone values + FPS:
     python3 src/camera.py
 """
 
+import os
+import sys
 import threading
 import time
 
@@ -40,9 +42,10 @@ class _PiCamSource:
         self._picam = picam
 
     def read(self):
-        # picamera2 returns an RGB array; convert to BGR for OpenCV consistency.
-        rgb = self._picam.capture_array()
-        return cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+        # picamera2's "RGB888" format actually delivers BGR-ordered arrays (a
+        # libcamera/numpy byte-order convention), which is already what OpenCV
+        # wants — so no color conversion here.
+        return self._picam.capture_array()
 
     def release(self):
         self._picam.stop()
@@ -90,17 +93,19 @@ def open_capture():
 # Motion detection
 # --------------------------------------------------------------------------- #
 class MotionDetector:
-    """Turns a frame into per-zone motion energy via MOG2 background subtraction."""
+    """Turns a frame into per-zone motion energy via frame differencing.
+
+    Each frame is compared to the *previous* frame: pixels that changed are
+    "in motion". Unlike background subtraction (MOG2), a person who stands
+    still simply reads ~0 instead of slowly fading into the background — which
+    is what we want for detecting bursts of movement like a jump.
+    """
 
     def __init__(self):
-        self._bg = cv2.createBackgroundSubtractorMOG2(
-            history=config.MOG2_HISTORY,
-            varThreshold=config.MOG2_VAR_THRESHOLD,
-            detectShadows=config.MOG2_DETECT_SHADOWS,
-        )
+        self._prev = None
 
     def process(self, frame):
-        """Return (signals dict, small BGR frame, binary mask)."""
+        """Return (signals dict, small BGR frame, binary motion mask)."""
         if config.MIRROR:
             frame = cv2.flip(frame, 1)
         small = cv2.resize(frame, (config.PROC_WIDTH, config.PROC_HEIGHT))
@@ -109,8 +114,11 @@ class MotionDetector:
         k = config.BLUR_KERNEL
         gray = cv2.GaussianBlur(gray, (k, k), 0)
 
-        fg = self._bg.apply(gray)
-        _, mask = cv2.threshold(fg, config.FG_THRESHOLD, 255, cv2.THRESH_BINARY)
+        if self._prev is None:
+            self._prev = gray
+        diff = cv2.absdiff(gray, self._prev)
+        self._prev = gray
+        _, mask = cv2.threshold(diff, config.DIFF_THRESHOLD, 255, cv2.THRESH_BINARY)
 
         h, w = mask.shape
         signals = {}
@@ -192,6 +200,22 @@ class MotionTracker:
 # --------------------------------------------------------------------------- #
 def _run_test():
     tracker = MotionTracker().start()
+
+    # No display (e.g. over SSH) or --print: stream zone values as text instead.
+    if not os.environ.get("DISPLAY") or "--print" in sys.argv:
+        print("Camera test (headless) — printing zone values. Ctrl-C to quit.")
+        try:
+            while True:
+                s, _, _, fps = tracker.snapshot()
+                print("fps:%4.1f  top:%.3f  left:%.3f  right:%.3f  total:%.3f"
+                      % (fps, s["top"], s["left"], s["right"], s["total"]), flush=True)
+                time.sleep(0.2)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            tracker.stop()
+        return
+
     print("Camera test — move in front of the camera. Press 'q' in the window to quit.")
     try:
         while True:

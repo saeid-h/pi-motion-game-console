@@ -11,12 +11,9 @@ PROC_HEIGHT = 240
 # Mirror the image horizontally so it feels like a mirror to the player.
 MIRROR = True
 
-# --- Motion pipeline ---
+# --- Motion pipeline (frame differencing: each frame vs the previous one) ---
 BLUR_KERNEL = 11            # odd number; Gaussian blur to suppress sensor noise
-MOG2_HISTORY = 200          # frames the background model remembers
-MOG2_VAR_THRESHOLD = 32     # higher = less sensitive to small changes
-MOG2_DETECT_SHADOWS = False # shadows add cost and false motion; off
-FG_THRESHOLD = 200          # binarize the foreground mask (0..255)
+DIFF_THRESHOLD = 20         # a pixel must change by this much (0..255) to count as motion
 
 # --- Capture ---
 CAMERA_INDEX = 0            # USB webcam / laptop camera index (Pi Camera ignores this)
@@ -31,7 +28,9 @@ ZONES = {
 
 # --- Trigger thresholds (fraction of a zone's pixels in motion, 0..1) ---
 # Consumed by the games, not by camera.py.
-JUMP_THRESHOLD = 0.12
+# JUMP_THRESHOLD measured on a real single-player clip: still ~0.006, jump peaks
+# ~0.14. 0.05 sits well clear of fidget noise. This is the #1 knob to tune.
+JUMP_THRESHOLD = 0.05
 PUNCH_THRESHOLD = 0.10
 DANCE_THRESHOLD = 0.05
 

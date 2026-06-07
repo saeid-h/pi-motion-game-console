@@ -46,13 +46,20 @@ Standard, cheap OpenCV pipeline on a small frame (320×240):
 1. Capture frame, downscale to 320×240.
 2. Convert to grayscale.
 3. Gaussian blur (kills sensor noise — also why camera focus is irrelevant).
-4. Background subtraction (`cv2.createBackgroundSubtractorMOG2`) → foreground mask of
-   what's *moving*.
+4. **Frame differencing** (`cv2.absdiff` of this frame vs the previous) → a mask of
+   pixels that *changed* since the last frame.
 5. Threshold the mask to binary.
 6. For each zone, motion energy = fraction of pixels that are "on" in that zone (0–1).
 
-A short calibration at game start lets the background model settle so a still child
-doesn't register as motion.
+> **Why frame differencing, not MOG2 background subtraction?** We originally used
+> MOG2. Testing on the real Pi showed it failed: a child standing between jumps fades
+> into MOG2's learned background, and the signal flatlined near zero through actual
+> jumping (measured — see the capture analysis). Frame differencing has no memory: a
+> still child reads ~0, any movement spikes immediately. On a real single-player clip
+> the whole-frame signal swung from ~0.006 at rest to ~0.14 mid-jump.
+
+A short "get ready" countdown at game start gives the child time to get set (frame
+differencing needs no background-model warm-up).
 
 ## Architecture: decouple camera from rendering
 
@@ -83,7 +90,7 @@ This stops one jump from registering as ten.
 
 | Game        | Signal used        | Trigger |
 |-------------|--------------------|---------|
-| Jump!       | `top`              | spike above threshold (debounced) |
+| Jump!       | `total`            | spike above threshold (debounced) |
 | Punch it    | `left` / `right`   | spike in that side |
 | Dance Along | `total`            | sustained energy over a window |
 | Simon Says  | direction of motion| mapped to "go left / right / jump / wave" |
@@ -120,20 +127,21 @@ mechanics are verified; only these real-world numbers remain.
 
 Procedure:
 
-1. **Run the camera test first:** `python3 src/camera.py`. Have your son stand where
-   he'll play. Watch the live values:
-   - When he stands still, every zone should read near **0.00–0.02**. If it idles
-     higher, raise `MOG2_VAR_THRESHOLD` and/or improve lighting (avoid a bright window
-     behind him).
-   - When he **jumps**, note the peak `top` value. When he **punches**, note `left`/`right`.
-2. **Set thresholds to ~60–70% of the peak** you observed. e.g. if a jump peaks `top`
-   ≈ 0.20, set `JUMP_THRESHOLD ≈ 0.13`. High enough to ignore fidgeting, low enough that
-   a real jump always fires.
+1. **Run the camera test first** (headless/over SSH it prints values; with a display it
+   shows a window): `python3 src/camera.py`. Have your son stand where he'll play and
+   watch the live values:
+   - When he stands still, `total` should read near **0.00–0.01**. If it idles higher,
+     raise `DIFF_THRESHOLD` and/or improve lighting (avoid a bright window behind him).
+   - When he **jumps**, note the peak `total` value. When he **punches**, note `left`/`right`.
+2. **Set `JUMP_THRESHOLD` to ~40–60% of the jump peak** you observed, well above the
+   still-idle value. e.g. a jump peaking `total` ≈ 0.14 → `JUMP_THRESHOLD ≈ 0.05–0.07`.
+   High enough to ignore fidgeting, low enough that a real jump always fires.
 3. **Debounce:** if one jump registers as several in-game jumps, raise `DEBOUNCE_S`
    (try 0.6–0.8). If quick repeated jumps feel unresponsive, lower it.
-4. **Camera framing:** mount at roughly chest height, far enough back that his whole body
-   is in frame. The `top` zone is the upper 40% of the frame — make sure his head/arms
-   actually enter it when he jumps. Adjust the zone boxes in `ZONES` if framing differs.
+4. **Camera framing:** mount at roughly chest height, far enough back that his **whole
+   body is in frame** and he fills a good portion of it. Crucially, **only the player
+   should be in frame** — frame differencing can't tell people apart, so a sibling or
+   adult moving in view will trigger jumps too.
 5. **Berry reach:** if the highest raspberries feel unreachable, lower the spawn heights
    in `GameState._spawn` (`game_jump.py`) or raise `JUMP_V`. Measured airtime peak is
    ~154 px at the current `JUMP_V`/`GRAVITY`.
@@ -142,8 +150,8 @@ Record the values you land on here once tested:
 
 | Knob | Default | Tuned for our room |
 |------|---------|--------------------|
-| `JUMP_THRESHOLD` | 0.12 | _tbd_ |
-| `MOG2_VAR_THRESHOLD` | 32 | _tbd_ |
+| `JUMP_THRESHOLD` | 0.05 | _tbd_ |
+| `DIFF_THRESHOLD` | 20 | _tbd_ |
 | `DEBOUNCE_S` | 0.5 | _tbd_ |
 
 ## How to add the next game

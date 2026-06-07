@@ -3,8 +3,8 @@
 A friendly character auto-runs. Rocks roll in along the ground (jump over them)
 and raspberries float at jump height (jump to grab them for points). The child
 makes the character jump by *physically jumping* in front of the camera, which
-spikes the `top` motion zone. The spacebar also works, for testing without a
-camera.
+spikes overall motion (the `total` zone). The spacebar also works, for testing
+without a camera.
 
     python3 src/game_jump.py
 
@@ -289,7 +289,8 @@ def main():
     state = GameState(config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
     trigger = JumpTrigger(config.JUMP_THRESHOLD, config.DEBOUNCE_S)
 
-    # Calibration warm-up: let the background model settle while the child stands still.
+    # Short "get ready" countdown before play begins (frame differencing needs
+    # no background settling, but the pause gives the child time to get set).
     calib_left = config.CALIBRATION_S if camera_on else 0.0
 
     running = True
@@ -310,7 +311,7 @@ def main():
 
         cam_jump = False
         if camera_on:
-            cam_jump = trigger.update(tracker.get()["top"], now)
+            cam_jump = trigger.update(tracker.get()["total"], now)
         jump = key_jump or cam_jump
 
         if calib_left > 0:
